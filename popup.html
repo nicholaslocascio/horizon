@@ -1,37 +1,22 @@
-<!doctype html>
-<!--
- This page is shown when the extension button is clicked, because the
- "browser_action" field in manifest.json contains the "default_popup" key with
- value "popup.html".
- -->
-<html>
-  <head>
-    <title>Getting Started Extension's Popup</title>
-    <style>
-      body {
-        font-family: "Segoe UI", "Lucida Grande", Tahoma, sans-serif;
-        font-size: 100%;
-      }
-      #status {
-        /* avoid an excessively wide status text */
-        white-space: pre;
-        text-overflow: ellipsis;
-        overflow: hidden;
-        max-width: 400px;
-      }
-    </style>
+<!DOCTYPE html>
+<head>
 
-    <!--
-      - JavaScript and HTML must be in separate files: see our Content Security
-      - Policy documentation[1] for details and explanation.
-      -
-      - [1]: https://developer.chrome.com/extensions/contentSecurityPolicy
-     -->
-    <script src="popup.js"></script>
-  </head>
-  <body>
-    <div id="status"></div>
-    <img id="image-result" hidden>
-  </body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+<script src="http://code.jquery.com/ui/1.9.2/jquery-ui.js"></script>
+<script src='popup.js'></script>
+
+</head>
+<body>
+<input type=text id=filter placeholder=Filter>
+<input type=checkbox id=regex>
+<label for=regex>Regex</label><br>
+<button id=download0>Download All!</button>
+<table id=links>
+  <tr>
+    <th><input type=checkbox checked id=toggle_all></th>
+    <th align=left>URL</th>
+  </tr>
+</table>
+<button id=download1>Download All!</button>
+</body>
 </html>
-

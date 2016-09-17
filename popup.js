@@ -1,118 +1,117 @@
-// Copyright (c) 2014 The Chromium Authors. All rights reserved.
+// Copyright (c) 2012 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/**
- * Get the current URL.
- *
- * @param {function(string)} callback - called when the URL of the current tab
- *   is found.
- */
-function getCurrentTabUrl(callback) {
-  // Query filter to be passed to chrome.tabs.query - see
-  // https://developer.chrome.com/extensions/tabs#method-query
-  var queryInfo = {
-    active: true,
-    currentWindow: true
-  };
+// This extension demonstrates using chrome.downloads.download() to
+// download URLs.
 
-  chrome.tabs.query(queryInfo, function(tabs) {
-    // chrome.tabs.query invokes the callback with a list of tabs that match the
-    // query. When the popup is opened, there is certainly a window and at least
-    // one tab, so we can safely assume that |tabs| is a non-empty array.
-    // A window can only have one active tab at a time, so the array consists of
-    // exactly one tab.
-    var tab = tabs[0];
+var allLinks = [];
+var visibleLinks = [];
 
-    // A tab is a plain object that provides information about the tab.
-    // See https://developer.chrome.com/extensions/tabs#type-Tab
-    var url = tab.url;
-
-    // tab.url is only available if the "activeTab" permission is declared.
-    // If you want to see the URL of other tabs (e.g. after removing active:true
-    // from |queryInfo|), then the "tabs" permission is required to see their
-    // "url" properties.
-    console.assert(typeof url == 'string', 'tab.url should be a string');
-
-    callback(url);
-  });
-
-  // Most methods of the Chrome extension APIs are asynchronous. This means that
-  // you CANNOT do something like this:
-  //
-  // var url;
-  // chrome.tabs.query(queryInfo, function(tabs) {
-  //   url = tabs[0].url;
-  // });
-  // alert(url); // Shows "undefined", because chrome.tabs.query is async.
-}
-
-/**
- * @param {string} searchTerm - Search term for Google Image search.
- * @param {function(string,number,number)} callback - Called when an image has
- *   been found. The callback gets the URL, width and height of the image.
- * @param {function(string)} errorCallback - Called when the image is not found.
- *   The callback gets a string that describes the failure reason.
- */
-function getImageUrl(searchTerm, callback, errorCallback) {
-  // Google image search - 100 searches per day.
-  // https://developers.google.com/image-search/
-  var searchUrl = 'https://ajax.googleapis.com/ajax/services/search/images' +
-    '?v=1.0&q=' + encodeURIComponent(searchTerm);
-  var x = new XMLHttpRequest();
-  x.open('GET', searchUrl);
-  // The Google image search API responds with JSON, so let Chrome parse it.
-  x.responseType = 'json';
-  x.onload = function() {
-    // Parse and process the response from Google Image Search.
-    var response = x.response;
-    if (!response || !response.responseData || !response.responseData.results ||
-        response.responseData.results.length === 0) {
-      errorCallback('No response from Google Image search!');
-      return;
+// Display all visible links.
+function showLinks() {
+  var linksTable = document.getElementById('links');
+  while (linksTable.children.length > 1) {
+    linksTable.removeChild(linksTable.children[linksTable.children.length - 1])
+  }
+  for (var i = 0; i < visibleLinks.length; ++i) {
+    var row = document.createElement('tr');
+    var col0 = document.createElement('td');
+    var col1 = document.createElement('td');
+    var checkbox = document.createElement('input');
+    checkbox.checked = true;
+    checkbox.type = 'checkbox';
+    checkbox.id = 'check' + i;
+    col0.appendChild(checkbox);
+    col1.innerText = visibleLinks[i];
+    col1.style.whiteSpace = 'nowrap';
+    col1.onclick = function() {
+      checkbox.checked = !checkbox.checked;
     }
-    var firstResult = response.responseData.results[0];
-    // Take the thumbnail instead of the full image to get an approximately
-    // consistent image size.
-    var imageUrl = firstResult.tbUrl;
-    var width = parseInt(firstResult.tbWidth);
-    var height = parseInt(firstResult.tbHeight);
-    console.assert(
-        typeof imageUrl == 'string' && !isNaN(width) && !isNaN(height),
-        'Unexpected respose from the Google Image Search API!');
-    callback(imageUrl, width, height);
-  };
-  x.onerror = function() {
-    errorCallback('Network error.');
-  };
-  x.send();
+    row.appendChild(col0);
+    row.appendChild(col1);
+    linksTable.appendChild(row);
+  }
 }
 
-function renderStatus(statusText) {
-  document.getElementById('status').textContent = statusText;
+// Toggle the checked state of all visible links.
+function toggleAll() {
+  var checked = document.getElementById('toggle_all').checked;
+  for (var i = 0; i < visibleLinks.length; ++i) {
+    document.getElementById('check' + i).checked = checked;
+  }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-  getCurrentTabUrl(function(url) {
-    // Put the image URL in Google search.
-    renderStatus('Performing Google Image search for ' + url);
+// Download all visible checked links.
+function downloadCheckedLinks() {
+  for (var i = 0; i < visibleLinks.length; ++i) {
+    if (document.getElementById('check' + i).checked) {
+      chrome.downloads.download({url: visibleLinks[i]},
+                                             function(id) {
+      });
+    }
+  }
+  window.close();
+}
 
-    getImageUrl(url, function(imageUrl, width, height) {
+// Re-filter allLinks into visibleLinks and reshow visibleLinks.
+function filterLinks() {
+  var filterValue = document.getElementById('filter').value;
+  if (document.getElementById('regex').checked) {
+    visibleLinks = allLinks.filter(function(link) {
+      return link.match(filterValue);
+    });
+  } else {
+    var terms = filterValue.split(' ');
+    visibleLinks = allLinks.filter(function(link) {
+      for (var termI = 0; termI < terms.length; ++termI) {
+        var term = terms[termI];
+        if (term.length != 0) {
+          var expected = (term[0] != '-');
+          if (!expected) {
+            term = term.substr(1);
+            if (term.length == 0) {
+              continue;
+            }
+          }
+          var found = (-1 !== link.indexOf(term));
+          if (found != expected) {
+            return false;
+          }
+        }
+      }
+      return true;
+    });
+  }
+  showLinks();
+}
 
-      renderStatus('Search term: ' + url + '\n' +
-          'Google image search result: ' + imageUrl);
-      var imageResult = document.getElementById('image-result');
-      // Explicitly set the width/height to minimize the number of reflows. For
-      // a single image, this does not matter, but if you're going to embed
-      // multiple external images in your page, then the absence of width/height
-      // attributes causes the popup to resize multiple times.
-      imageResult.width = width;
-      imageResult.height = height;
-      imageResult.src = imageUrl;
-      imageResult.hidden = false;
+// Add links to allLinks and visibleLinks, sort and show them.  send_links.js is
+// injected into all frames of the active tab, so this listener may be called
+// multiple times.
+chrome.extension.onRequest.addListener(function(links) {
+  for (var index in links) {
+    allLinks.push(links[index]);
+  }
+  allLinks.sort();
+  visibleLinks = allLinks;
+  showLinks();
+});
 
-    }, function(errorMessage) {
-      renderStatus('Cannot display image. ' + errorMessage);
+// Set up event handlers and inject send_links.js into all frames in the active
+// tab.
+window.onload = function() {
+  document.getElementById('filter').onkeyup = filterLinks;
+  document.getElementById('regex').onchange = filterLinks;
+  document.getElementById('toggle_all').onchange = toggleAll;
+  document.getElementById('download0').onclick = downloadCheckedLinks;
+  document.getElementById('download1').onclick = downloadCheckedLinks;
+
+  chrome.windows.getCurrent(function (currentWindow) {
+    chrome.tabs.query({active: true, windowId: currentWindow.id},
+                      function(activeTabs) {
+      chrome.tabs.executeScript(
+        activeTabs[0].id, {file: 'send_links.js', allFrames: true});
     });
   });
-});
+};
