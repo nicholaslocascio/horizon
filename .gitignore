@@ -90,3 +90,5 @@ ENV/
 .ropeproject
 
 .DS_Store
+.*t7
+model/*

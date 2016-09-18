@@ -1,0 +1,1 @@
+docker run -e "modelPath=/mounted/model/model_id1-501-1448236541.t7_cpu.t7" --name neuraltalk2-web -p 5000:5000 -v ~/MIT/MEng/horizon:/mounted jacopofar/neuraltalk2-web:latest

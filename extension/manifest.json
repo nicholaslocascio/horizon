@@ -1,9 +1,15 @@
 {
-  "name": "Download Selected Links",
-  "description": "Select links on a page and download them.",
+  "manifest_version": 2,
+  "name": "Horizon: Automatic Alt-text for Visually Impaired Users",
   "version": "0.1",
-  "minimum_chrome_version": "16.0.884",
-  "permissions": ["downloads", "<all_urls>"],
-  "browser_action": {"default_popup": "popup.html"},
-  "manifest_version": 2
+  "permissions": ["https://localhost/*"],
+  "icons": {"128": "icon128.png", "64": "icon64.png", "32": "icon32.png"},
+  "content_scripts": [
+  {
+    "matches": [
+      "<all_urls>"
+    ],
+    "js": ["jquery-3.1.0.min.js", "content.js"]
+  }
+]
 }
