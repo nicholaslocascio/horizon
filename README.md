@@ -1,4 +1,4 @@
-# horizon
+# HORIZON
 
 Neural-Talk for Automatic Alt-text for Visually Impaired Users with a Chrome Extension
 
